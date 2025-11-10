@@ -1,0 +1,45 @@
+services:
+  wizard-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wizard-backend
+    expose:
+      - "8080"
+    volumes:
+      # Mount projects directory from host to container
+      - /data/wizard-projects:/app/projects
+    env_file:
+      - .env.production
+    environment:
+      # Override storage path for container
+      - STORAGE_PATH=/app/projects
+      - HOST=0.0.0.0
+      - PORT=8080
+      - RUST_LOG=info
+      - EMAIL=admin@thewizard.app
+    restart: unless-stopped
+    networks:
+      - proxy
+      - wizard-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=proxy"
+      # HTTP Router for API
+      - "traefik.http.routers.wizard-api.rule=Host(`api.thewizard.app`)"
+      - "traefik.http.routers.wizard-api.entrypoints=websecure"
+      - "traefik.http.routers.wizard-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.wizard-api.loadbalancer.server.port=8080"
+      # CORS middleware
+      - "traefik.http.middlewares.wizard-cors.headers.accesscontrolallowmethods=*"
+      - "traefik.http.middlewares.wizard-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.wizard-cors.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.wizard-cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.wizard-cors.headers.addvaryheader=true"
+      - "traefik.http.routers.wizard-api.middlewares=wizard-cors"
+
+networks:
+  proxy:
+    external: true
+  wizard-network:
+    driver: bridge

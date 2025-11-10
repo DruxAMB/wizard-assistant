@@ -1,0 +1,49 @@
+Wizard Stylus IDE – AI Reference Guide
+====================================
+
+Purpose
+-------
+Provide Gemini with concise, reliable answers about using the Wizard Stylus IDE. Use this file for IDE workflow questions. For Stylus language or smart-contract specifics, respond with the official docs link: https://docs.arbitrum.io/stylus.
+
+Core Concepts
+-------------
+1. Workspace Layout
+   - **File Explorer (left column)**: browse, create, rename, delete project files. Primary folders: `.cargo`, `.github`, `ci`, `src`, `tests`, `Cargo.toml`, `rust-toolchain.toml`.
+   - **Editor (center)**: Monaco-based editor with Rust/Stylus syntax highlighting, multi-tab support, inline diagnostics.
+   - **Output Panel (right/bottom)**: shows compile/deploy logs, terminal sessions, ABI viewer, and deployment history depending on active tab.
+
+2. Project Lifecycle
+   - Templates: triggered when creating a project; backend copies from `backend/examples/<template-id>`. If directory missing, initialization fails.
+   - Compile button calls `POST /api/local/compile`; results stream to the output panel. Requires backend (`cargo run`) and sandbox image built.
+   - Deploy button offers **Wizard Wallet** (backend-managed key) and **User Wallet** modes via Wagmi/RainbowKit.
+   - Terminal tab uses WebSocket `/ws/terminal` to run commands (e.g., `cargo stylus check`).
+
+3. File Operations
+   - Right-click in File Explorer for context menu (new file/folder, rename, delete).
+   - Drag-and-drop reordering limited to files within the same directory.
+   - Autosave is enabled; manual save via `Ctrl/Cmd+S` also supported.
+
+4. Key Shortcuts
+   - `Ctrl/Cmd+P`: quick file switcher.
+   - `Ctrl/Cmd+Shift+F`: project-wide search.
+   - `Ctrl/Cmd+/`: toggle line comment.
+   - `Ctrl/Cmd+Shift+L`: select all occurrences of selection.
+   - `Ctrl/Cmd+B`: toggle file explorer sidebar.
+
+5. Backend Dependencies
+   - Backend must run locally on `http://localhost:8080` with `.env` configured (Supabase keys, RPC URLs, contract key).
+   - Supabase migrations must be applied (`npx supabase db push`) before first compile/deploy to avoid 404s on `/rest/v1/users`/`projects`.
+   - Docker sandbox image built via `backend/scripts/build-sandbox.sh` (or PowerShell equivalent) for compilation features.
+
+6. Troubleshooting Prompts
+   - **Compilation fails immediately**: verify backend logs for sandbox errors or missing toolchain (`rustup toolchain install <version>` plus `rust-src`).
+   - **Template fetch errors**: ensure `backend/examples` contains template directories and backend is running.
+   - **Network Error from frontend**: backend offline or port mismatch with `VITE_API_URL`.
+   - **Supabase table missing**: run migrations; tables `public.users` and `public.projects` must exist.
+
+Response Guidance for Gemini
+----------------------------
+1. When question concerns IDE usage/navigation/build pipeline, answer from this file.
+2. If user asks about Stylus syntax, Rust contract patterns, or blockchain deployment details, point them to https://docs.arbitrum.io/stylus and optionally summarize relevant sections.
+3. Always remind users to keep backend running and migrations applied when troubleshooting.
+4. Clarify limitations: AI cannot modify files, execute commands, or view user secrets.
