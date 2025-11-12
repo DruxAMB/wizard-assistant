@@ -25,6 +25,19 @@ const STYLUS_KEYWORDS = [
   'rust',
 ];
 
+const QUICK_QUESTIONS = [
+  {
+    id: 'compile',
+    label: 'How do I compile my project?',
+    prompt: 'How do I compile my project in the Wizard IDE?',
+  },
+  {
+    id: 'logs',
+    label: 'Where do I see compile errors?',
+    prompt: 'Where can I review compilation errors in the Wizard IDE?',
+  },
+];
+
 type AssistantMessage = {
   id: string;
   role: 'user' | 'assistant';
@@ -127,10 +140,9 @@ export function EditorAssistant({ open, onOpenChange, projectName }: EditorAssis
     ]);
   }, [guide, projectName]);
 
-  const handleSend = async (event: FormEvent) => {
-    event.preventDefault();
-    const trimmed = input.trim();
-    if (!trimmed || guideError || modelError) return;
+  const sendPrompt = async (rawText: string) => {
+    const trimmed = rawText.trim();
+    if (!trimmed || guideError || modelError || isSending) return;
 
     const userMessage: AssistantMessage = {
       id: createId(),
@@ -139,9 +151,10 @@ export function EditorAssistant({ open, onOpenChange, projectName }: EditorAssis
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
 
     if (containsStylusKeyword(trimmed)) {
+      setIsSending(true);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
       setMessages((prev) => [
         ...prev,
         {
@@ -151,6 +164,7 @@ export function EditorAssistant({ open, onOpenChange, projectName }: EditorAssis
           docsLink: STYLUS_DOC_URL,
         },
       ]);
+      setIsSending(false);
       return;
     }
 
@@ -174,7 +188,7 @@ export function EditorAssistant({ open, onOpenChange, projectName }: EditorAssis
           role: 'user',
           parts: [{ text: systemPrompt }],
         },
-        ...[...messages, userMessage]
+        ...messages
           .filter((message) => message.role !== 'assistant' || message.docsLink === undefined)
           .map((message): Content => (
             message.role === 'assistant'
@@ -227,18 +241,44 @@ export function EditorAssistant({ open, onOpenChange, projectName }: EditorAssis
     }
   };
 
+  const handleSend = async (event: FormEvent) => {
+    event.preventDefault();
+    const currentInput = input;
+    const trimmed = currentInput.trim();
+    if (!trimmed) return;
+    setInput('');
+    await sendPrompt(trimmed);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex h-full flex-col gap-4 sm:max-w-xl">
         <SheetHeader className="space-y-2 text-left">
           <SheetTitle className="flex items-center gap-2 text-lg">
             <Sparkles className="h-4 w-4 text-primary" />
-            AI Assistant
+            Wizard Assistant
           </SheetTitle>
           <SheetDescription>
             Answers Wizard IDE navigation, troubleshooting and stylus contract questions.
           </SheetDescription>
         </SheetHeader>
+
+        <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/20 p-3">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Quick questions</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_QUESTIONS.map((question) => (
+              <Button
+                key={question.id}
+                variant="outline"
+                size="sm"
+                disabled={isSending}
+                onClick={() => void sendPrompt(question.prompt)}
+              >
+                {question.label}
+              </Button>
+            ))}
+          </div>
+        </div>
 
         {guideError && (
           <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
